@@ -20,7 +20,7 @@ import {
 } from 'firebase/auth';
 
 // ==========================================
-// 🔑 您的 Firebase 設定 (已填入)
+// 🔑 您的 Firebase 設定
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyAmwYU6D3MR0LK4BR8otdMZZssj_AgvXJM",
@@ -39,7 +39,6 @@ try {
 } catch (e) {
   // 忽略重複初始化錯誤
 }
-// 這裡加個判斷，避免 SSR 環境報錯，雖然是 Vite 但安全一點
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -55,7 +54,6 @@ const BACKGROUND_IMAGES = {
 
 // --- 資料庫與設定 ---
 
-// 1. 三種風格定義 (統一使用 Zen Maru Gothic 圓體)
 const THEMES = {
   forest: {
     id: 'forest',
@@ -73,7 +71,6 @@ const THEMES = {
       cardBackOverlay: "bg-[#2F3E35]/20 mix-blend-multiply",
       cardBackBorder: "border-[6px] border-white",
       stackColor: "bg-[#5F7D6B]", 
-      // 卡面正面：米色紙張質感，無底圖，無頂部色塊
       cardFront: "bg-[#FDFAF6] border-4 border-[#E0E8E0]",
       input: "bg-white border-none rounded-2xl focus:ring-2 focus:ring-[#4A6756] p-4 shadow-sm placeholder-[#7A8C81]/60",
       font: "font-['Zen_Maru_Gothic',_sans-serif]",
@@ -99,7 +96,6 @@ const THEMES = {
       cardBackOverlay: "bg-white/10",
       cardBackBorder: "border border-white/40",
       stackColor: "bg-indigo-300",
-      // 卡面正面：純白卡片
       cardFront: "bg-white border border-indigo-100 shadow-lg",
       input: "bg-white/50 border border-indigo-100 rounded-full focus:ring-2 focus:ring-indigo-300 p-4 placeholder-indigo-300",
       font: "font-['Zen_Maru_Gothic',_sans-serif]",
@@ -125,7 +121,6 @@ const THEMES = {
       cardBackOverlay: "bg-[#44403c]/10",
       cardBackBorder: "border-4 border-[#F5F5F0]",
       stackColor: "bg-[#57534e]",
-      // 卡面正面：極簡燕麥色
       cardFront: "bg-[#FAFAF9] border border-[#E7E5E4]",
       input: "bg-transparent border-b border-[#78716c] rounded-none focus:border-[#292524] p-4 px-0 placeholder-[#78716c]/50",
       font: "font-['Zen_Maru_Gothic',_sans-serif]",
@@ -137,7 +132,6 @@ const THEMES = {
   }
 };
 
-// 2. 情緒選項
 const MOODS = [
   { label: "平靜安穩", score: 85, icon: <Feather className="w-5 h-5" /> },
   { label: "充滿能量", score: 90, icon: <Sun className="w-5 h-5" /> },
@@ -151,9 +145,7 @@ const MOODS = [
   { label: "受傷低落", score: 25, icon: <CloudRain className="w-5 h-5" /> },
 ];
 
-// 3. 完整 52 張牌卡資料庫
 const CARD_DATABASE = [
-  // A. 身體著地 (Grounding) - 10張
   { category: "身體覺察", title: "雙腳著地", message: "當思緒飄到遠方時，身體是你唯一的錨。", action: "用力踩踏地板三下，感受腳底與地面的接觸面。" },
   { category: "身體覺察", title: "5-4-3-2-1", message: "用感官找回對當下的控制權。", action: "找出：5樣看到的、4樣摸到的、3樣聽到的、2樣聞到的、1樣嚐到的。" },
   { category: "身體覺察", title: "蝴蝶擁抱", message: "透過雙側刺激，整合混亂的情緒。", action: "雙手交叉抱胸，左右交替輕拍肩膀一分鐘。" },
@@ -164,8 +156,6 @@ const CARD_DATABASE = [
   { category: "身體覺察", title: "推牆運動", message: "釋放體內因壓力而積累的能量。", action: "雙手抵住牆壁，用盡全力推牆10秒，感受肌肉緊繃後放鬆。" },
   { category: "身體覺察", title: "掃描緊繃", message: "我們常不自覺地聳肩或咬牙。", action: "從頭到腳掃描，刻意把肩膀垂下來，鬆開下顎。" },
   { category: "身體覺察", title: "感受支撐", message: "你不需要隨時都撐住自己。", action: "將背完全靠在椅背上，把重量交給椅子。" },
-
-  // B. 情緒調節 (Regulation) - 10張
   { category: "情緒調節", title: "情緒命名", message: "說得出來，就能被馴服。", action: "用三個精準形容詞描述現在感受，不只是「不好」。" },
   { category: "情緒調節", title: "允許流淚", message: "眼淚是生理排毒。", action: "找個安全地方，給自己5分鐘盡情流淚。" },
   { category: "情緒調節", title: "情緒衝浪", message: "情緒像海浪，會升起也會落下。", action: "閉眼想像情緒是浪頭，看著它升起、破碎、退去。" },
@@ -176,8 +166,6 @@ const CARD_DATABASE = [
   { category: "情緒調節", title: "嘆氣的藝術", message: "嘆氣是釋放的信號。", action: "深吸一口氣，然後發出聲音長長地嘆出來：「唉——」。" },
   { category: "情緒調節", title: "與情緒對話", message: "創造心理距離。", action: "問心中的焦慮：「親愛的焦慮，你想保護我什麼？」" },
   { category: "情緒調節", title: "觸摸安撫", message: "皮膚的飢渴需要被滿足。", action: "用右手掌心溫柔地摩擦左手手臂，像安撫一個孩子。" },
-
-  // C. 心理界線 (Boundaries) - 10張
   { category: "心理界線", title: "光之防護", message: "同理心不是讓對方踩進你的草皮。", action: "想像金光包圍你，負能量會被彈開。" },
   { category: "心理界線", title: "下班儀式", message: "大腦需要切換訊號。", action: "離開時做個「拍灰塵」動作，把工作留門後。" },
   { category: "心理界線", title: "拒絕練習", message: "設限是對自己的慈悲。", action: "練習說：「我現在無法接下，因為我要確保現有個案品質。」" },
@@ -188,8 +176,6 @@ const CARD_DATABASE = [
   { category: "心理界線", title: "不急著回應", message: "急迫感通常是焦慮的投射。", action: "試著說：「我收到了，確認行程後回覆你。」" },
   { category: "心理界線", title: "能量盤點", message: "能量帳戶不能只出不進。", action: "如果能量低於3分，拒絕下一個非緊急請求。" },
   { category: "心理界線", title: "脫下戰袍", message: "社工只是外衣。", action: "換衣服時想像真的脫下「社工皮」，變回人類。" },
-
-  // D. 自我慈悲 (Self-Compassion) - 10張
   { category: "自我慈悲", title: "像對朋友", message: "別對自己說對朋友說不出口的話。", action: "如果好友遭遇你的處境，你會對他說什麼？對自己說。" },
   { category: "自我慈悲", title: "擁抱無力", message: "系統性無力不是你的錯。", action: "手撫胸口：「這真的很難，但我有一顆柔軟的心。」" },
   { category: "自我慈悲", title: "足夠好了", message: "完美主義通往耗竭。", action: "咒語：「Done is better than perfect。」" },
@@ -200,8 +186,6 @@ const CARD_DATABASE = [
   { category: "自我慈悲", title: "接納陰影", message: "負面想法不代表你是壞社工。", action: "告訴自己：「我感到厭煩是正常的，這是我的人性。」" },
   { category: "自我慈悲", title: "給自己的信", message: "未來的你會感謝現在撐住的你。", action: "在備忘錄寫一句鼓勵的話給明天的自己。" },
   { category: "自我慈悲", title: "暫停批判", message: "自我批判會啟動防禦系統。", action: "把「我應該更好」改成「我正在學習如何處理」。" },
-
-  // E. 內在力量 (Resilience) - 10張
   { category: "內在力量", title: "見證者", message: "見證本身就有療癒力。", action: "肯定自己：「因為我在這裡，他沒有獨自面對黑暗。」" },
   { category: "內在力量", title: "尋找韌性", message: "在創傷中也藏著生存智慧。", action: "找出個案的一個強項，並讚嘆生命的韌性。" },
   { category: "內在力量", title: "控制可控", message: "焦慮來自想控制不可控。", action: "畫一個圓，圓內寫你能控制的，專注在圓內。" },
@@ -212,8 +196,6 @@ const CARD_DATABASE = [
   { category: "內在力量", title: "創造力", message: "創造力能解凍創傷。", action: "隨手塗鴉或哼歌，做點無生產力但好玩的事。" },
   { category: "內在力量", title: "小勝利", message: "大腦需要多巴胺。", action: "完成一件超小的事（如整理桌面），給自己一個讚。" },
   { category: "內在力量", title: "希望的種子", message: "功不唐捐。", action: "相信你的努力可能多年後才開花，但那沒關係。" },
-
-  // Bonus - 2張
   { category: "特別提醒", title: "專業求助", message: "醫者也需要醫治。", action: "如果長期耗竭，請考慮預約諮商或督導。" },
   { category: "特別提醒", title: "就是現在", message: "最好的時間點就是現在。", action: "放下手機，閉眼深呼吸一次。" }
 ];
@@ -238,7 +220,7 @@ export default function App() {
   const [targetLogs, setTargetLogs] = useState([]);
   const [newMemberName, setNewMemberName] = useState('');
 
-  // 安全獲取 Theme，預設為 forest
+  // 安全獲取 Theme
   const theme = THEMES[currentThemeId] || THEMES['forest'];
   const styles = theme.styles;
 
@@ -262,3 +244,96 @@ export default function App() {
       try {
         await signInAnonymously(auth);
       } catch (err) {
+        console.error("Auth error", err);
+        setInitError(true);
+      }
+    };
+    initAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      
+      const storedNick = localStorage.getItem('sw_app_nickname');
+      const storedTheme = localStorage.getItem('sw_app_theme');
+      const storedTeam = localStorage.getItem('sw_supervisor_team');
+      
+      if (storedTheme && THEMES[storedTheme]) {
+        setCurrentThemeId(storedTheme);
+      }
+      
+      if (storedNick) {
+        setNickname(storedNick);
+        setScreen('welcome');
+      }
+      
+      if (storedTeam) {
+        try {
+          setSupervisorTeam(JSON.parse(storedTeam));
+        } catch(e) {
+          setSupervisorTeam([]);
+        }
+      }
+
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // --- Logic Functions ---
+  const addTeamMember = (e) => {
+    e.preventDefault();
+    if (!newMemberName.trim()) return;
+    const updatedTeam = [...supervisorTeam, newMemberName.trim()];
+    setSupervisorTeam(updatedTeam);
+    localStorage.setItem('sw_supervisor_team', JSON.stringify(updatedTeam));
+    setNewMemberName('');
+  };
+
+  const removeTeamMember = (name) => {
+    const updatedTeam = supervisorTeam.filter(m => m !== name);
+    setSupervisorTeam(updatedTeam);
+    localStorage.setItem('sw_supervisor_team', JSON.stringify(updatedTeam));
+    if (supervisorTarget === name) {
+      setSupervisorTarget('');
+      setTargetLogs([]);
+    }
+  };
+
+  const selectMember = (name) => {
+    setSupervisorTarget(name);
+  };
+
+  useEffect(() => {
+    if (!user || !supervisorTarget || !db) return;
+    
+    // 使用 'mood_logs' 路徑
+    const q = collection(db, 'mood_logs');
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp ? doc.data().timestamp.toDate() : new Date()
+      }));
+      
+      const userLogs = allData
+        .filter(log => log.nickname === supervisorTarget)
+        .sort((a, b) => b.timestamp - a.timestamp);
+        
+      setTargetLogs(userLogs);
+    });
+    
+    return () => unsubscribe();
+  }, [user, supervisorTarget]);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (!tempNickname.trim()) return;
+    setNickname(tempNickname.trim());
+    localStorage.setItem('sw_app_nickname', tempNickname.trim());
+    setScreen('welcome');
+  };
+
+  const handleLogout = () => {
+    setNickname('');
+    setTempNickname('');
