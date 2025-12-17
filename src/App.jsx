@@ -337,3 +337,427 @@ export default function App() {
   const handleLogout = () => {
     setNickname('');
     setTempNickname('');
+    localStorage.removeItem('sw_app_nickname');
+    setScreen('login');
+  };const changeTheme = (id) => {
+    setCurrentThemeId(id);
+    localStorage.setItem('sw_app_theme', id);
+  };
+
+  const drawCard = () => {
+    const randomIdx = Math.floor(Math.random() * CARD_DATABASE.length);
+    const card = CARD_DATABASE[randomIdx];
+    setCurrentCard(card);
+    setScreen('reveal');
+    setIsFlipped(false);
+    setTimeout(() => setIsFlipped(true), 100);
+    setCopySuccess(false);
+    
+    if (user && selectedMood && db) {
+      addDoc(collection(db, 'mood_logs'), {
+        nickname: nickname,
+        userId: user.uid,
+        moodLabel: selectedMood.label,
+        moodScore: selectedMood.score,
+        cardTitle: card.title,
+        cardCategory: card.category,
+        themeUsed: currentThemeId,
+        timestamp: serverTimestamp()
+      }).catch(console.error);
+    }
+  };
+
+  const copyContent = () => {
+    if (!currentCard) return;
+    const text = `【社工心靈暫停鍵】\n我今天抽到了「${currentCard.title}」\n\n${currentCard.message}\n\n🌟 微行動：${currentCard.action}`;
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
+  };
+
+  const chartData = useMemo(() => {
+    return [...targetLogs].reverse().map(l => ({
+      date: l.timestamp.toLocaleDateString(undefined, {month:'numeric', day:'numeric'}),
+      score: l.moodScore,
+      mood: l.moodLabel
+    })).slice(-20);
+  }, [targetLogs]);
+
+  // --- Sub-Components ---
+
+  const ThemeToggle = () => (
+    <div className="flex gap-2 mb-6 bg-white/50 p-1 rounded-full backdrop-blur-sm shadow-sm inline-flex flex-wrap justify-center">
+      {Object.values(THEMES).map(t => (
+        <button
+          key={t.id}
+          onClick={() => changeTheme(t.id)}
+          className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${currentThemeId === t.id ? 'bg-white shadow-md text-stone-800 scale-105' : 'text-stone-500 hover:text-stone-800'}`}
+        >
+          {t.icon}
+          <span className="">{t.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  // --- Screens ---
+
+  const LoginScreen = () => (
+    <div className={`min-h-screen ${styles.appBg} flex flex-col items-center justify-center p-6 transition-colors duration-500 ${styles.font}`}>
+      <div className={`max-w-md w-full p-8 space-y-8 animate-fade-in ${styles.cardFront} rounded-[32px] relative overflow-hidden shadow-xl`}>
+        <div className="text-center relative z-10">
+          <div className="flex justify-center mb-6">
+             <div className="p-4 bg-[#F5F5F0] rounded-full shadow-inner">
+               {theme.icon}
+             </div>
+          </div>
+          <h2 className={`text-3xl font-bold ${styles.textMain} tracking-wide`}>心靈暫停鍵</h2>
+          <p className={`${styles.textSub} mt-3`}>請輸入您的匿名代號進入</p>
+        </div>
+        
+        <form onSubmit={handleLogin} className="space-y-6 relative z-10">
+          <input
+            type="text"
+            placeholder="例如: 漫步的鹿"
+            className={`w-full ${styles.input} ${styles.textMain} outline-none transition-all text-center border border-gray-100`}
+            value={tempNickname}
+            onChange={(e) => setTempNickname(e.target.value)}
+          />
+          <button type="submit" disabled={!tempNickname.trim()} className={`w-full py-4 font-bold tracking-widest transition-all ${styles.btnPrimary} disabled:opacity-50`}>
+            進入空間
+          </button>
+        </form>
+
+        <div className="pt-6 border-t border-gray-100/50 text-center relative z-10">
+          <button 
+            onClick={() => setScreen('supervisor')}
+            className={`text-xs ${styles.textSub} hover:${styles.accent} flex items-center justify-center gap-1 mx-auto opacity-60 hover:opacity-100 transition-opacity`}
+          >
+            <LayoutDashboard className="w-3 h-3" />
+            督導專用入口
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const SupervisorScreen = () => (
+    <div className="min-h-screen bg-stone-100 font-sans flex flex-col">
+      <div className="bg-white border-b border-stone-200 px-6 py-4 flex justify-between items-center shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="bg-teal-600 p-2 rounded-lg text-white"><LayoutDashboard className="w-5 h-5" /></div>
+          <h1 className="text-xl font-bold text-stone-800">督導儀表板</h1>
+        </div>
+        <button onClick={() => setScreen('login')} className="text-stone-500 hover:text-stone-800 text-sm flex items-center gap-1">
+          <LogOut className="w-4 h-4" /> 離開
+        </button>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+        <div className="w-full md:w-80 bg-stone-50 border-r border-stone-200 p-6 flex flex-col overflow-y-auto">
+          <h2 className="text-sm font-bold text-stone-400 uppercase tracking-wider mb-4">我的團隊</h2>
+          
+          <form onSubmit={addTeamMember} className="mb-6">
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={newMemberName}
+                onChange={(e) => setNewMemberName(e.target.value)}
+                placeholder="輸入社工暱稱..."
+                className="flex-1 bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+              />
+              <button type="submit" className="bg-stone-200 hover:bg-stone-300 text-stone-600 p-2 rounded-lg">
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </form>
+
+          <div className="space-y-2 flex-1">
+            {supervisorTeam.length === 0 && <p className="text-sm text-stone-400 text-center py-4">尚無成員</p>}
+            {supervisorTeam.map(name => (
+              <div 
+                key={name}
+                onClick={() => selectMember(name)}
+                className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${supervisorTarget === name ? 'bg-white shadow-md border-l-4 border-teal-500' : 'hover:bg-white hover:shadow-sm'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${supervisorTarget === name ? 'bg-teal-100 text-teal-700' : 'bg-stone-200 text-stone-500'}`}>
+                    {name.charAt(0)}
+                  </div>
+                  <span className={`font-medium ${supervisorTarget === name ? 'text-stone-800' : 'text-stone-600'}`}>{name}</span>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); removeTeamMember(name); }} className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-red-400 p-1">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 p-6 md:p-10 overflow-y-auto">
+          {!supervisorTarget ? (
+            <div className="h-full flex flex-col items-center justify-center text-stone-400">
+              <p>請從左側選擇一位成員查看詳細紀錄</p>
+            </div>
+          ) : (
+            <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-2xl font-bold text-stone-800 flex items-center gap-2">
+                  <span className="text-teal-600">{supervisorTarget}</span> 的狀態概覽
+                </h2>
+                <span className="text-sm text-stone-500">共 {targetLogs.length} 筆紀錄</span>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 h-80">
+                <h3 className="text-sm font-bold text-stone-500 mb-4">近期情緒能量趨勢</h3>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#0d9488" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#0d9488" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                      <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Area type="monotone" dataKey="score" stroke="#0d9488" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : <div className="h-full flex items-center justify-center text-stone-300">尚無數據</div>}
+              </div>
+              <div className="space-y-3">
+                  {targetLogs.map(log => (
+                    <div key={log.id} className="bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-1.5 h-10 rounded-full ${log.moodScore >= 80 ? 'bg-rose-400' : log.moodScore >= 60 ? 'bg-teal-400' : 'bg-slate-400'}`}></div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-stone-700">{log.moodLabel}</span>
+                            <span className="text-xs text-stone-400">{log.timestamp.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric' })}</span>
+                          </div>
+                          <div className="text-sm text-stone-500 mt-1">{log.cardTitle}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const WelcomeScreen = () => (
+    <div className={`min-h-screen ${styles.appBg} flex flex-col items-center justify-center p-6 relative transition-colors duration-500 ${styles.font}`}>
+      
+      <div className="absolute top-6 right-6 flex gap-3 z-10">
+        <button onClick={() => setScreen('history')} className={`p-3 transition-all shadow-sm ${styles.btnSecondary}`} title="個人紀錄"><History className="w-5 h-5" /></button>
+        <button onClick={handleLogout} className={`p-3 transition-all shadow-sm ${styles.btnSecondary} hover:text-red-500 hover:border-red-200`} title="登出"><LogOut className="w-5 h-5" /></button>
+      </div>
+
+      <div className="max-w-md w-full text-center space-y-10 animate-fade-in relative z-0">
+        <ThemeToggle />
+        <div className={`mx-auto w-24 h-24 flex items-center justify-center rounded-full ${currentThemeId === 'watercolor' ? 'bg-white/30 backdrop-blur-md' : 'bg-transparent'}`}>
+           {theme.icon}
+        </div>
+        <div>
+           <h1 className={`text-4xl font-bold ${styles.textMain} mb-4`}>嗨，{nickname}</h1>
+           <p className={`text-lg ${styles.textSub} leading-relaxed`}>在這個安全的空間裡，<br/>你只需要做你自己。</p>
+        </div>
+        <button onClick={() => setScreen('checkin')} className={`px-12 py-5 text-xl font-bold ${styles.btnPrimary} flex items-center justify-center mx-auto gap-3`}>
+          <Search className="w-5 h-5" /> 開始覺察
+        </button>
+      </div>
+    </div>
+  );
+
+  const CheckinScreen = () => (
+    <div className={`min-h-screen ${styles.appBg} flex flex-col items-center justify-center p-4 transition-colors duration-500 ${styles.font}`}>
+      <div className="max-w-xl w-full">
+        <h2 className={`text-2xl font-bold ${styles.textMain} mb-2 text-center`}>當下的氣候</h2>
+        <p className={`${styles.textSub} mb-8 text-center`}>誠實面對狀態，就是療癒的開始。</p>
+        <div className="grid grid-cols-2 gap-4">
+          {MOODS.map((mood, idx) => (
+            <button key={idx} onClick={() => { setSelectedMood(mood); setScreen('deck'); }} className={`flex items-center p-4 transition-all group ${styles.moodBtn} hover:shadow-md`}>
+              <div className={`mr-3 ${styles.accent}`}>{mood.icon}</div>
+              <span className={`font-bold ${styles.textMain}`}>{mood.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-10 text-center"><button onClick={() => setScreen('welcome')} className={`${styles.textSub} hover:${styles.textMain} underline text-sm`}>返回</button></div>
+      </div>
+    </div>
+  );
+
+  const DeckScreen = () => (
+    <div className={`min-h-screen ${styles.appBg} flex flex-col items-center justify-center p-6 overflow-hidden relative transition-colors duration-500 ${styles.font}`}>
+      <div className="max-w-md w-full text-center space-y-8 z-10">
+        <div className="animate-fade-in-up">
+          <p className={`${styles.accent} font-bold tracking-widest text-xs uppercase mb-2`}>Your Mood</p>
+          <h3 className={`text-3xl ${styles.textMain} font-bold flex items-center justify-center gap-2`}>{selectedMood?.icon} {selectedMood?.label}</h3>
+        </div>
+        <div className="relative h-96 flex items-center justify-center py-8 group perspective-1000">
+           {/* Card Stack Effect */}
+          <div className={`absolute w-64 h-96 rounded-[32px] cursor-pointer transform translate-x-4 translate-y-4 opacity-30 ${styles.cardBackBorder} ${styles.stackColor} opacity-50`}></div>
+          
+          <div onClick={drawCard} className={`relative w-64 h-96 rounded-[32px] shadow-xl overflow-hidden cursor-pointer transform group-hover:-translate-y-2 transition-all duration-500 flex flex-col items-center justify-center ${styles.cardBackBorder}`}>
+            {/* 只有在卡背顯示圖片 */}
+            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${theme.cardImage})` }}></div>
+             {/* Overlay Layer based on theme */}
+            <div className={`absolute inset-0 ${styles.cardBackOverlay}`}></div>
+            
+            <div className="relative z-10 flex flex-col items-center">
+              {currentThemeId === 'zen' ? (
+                 <div className="border-2 border-[#F5F5F0] p-6 flex items-center justify-center"><span className="text-[#F5F5F0] font-serif text-2xl tracking-[0.3em] vertical-rl">心靈處方</span></div>
+               ) : (
+                 <>
+                   <Heart className="w-16 h-16 text-white/80 animate-pulse" />
+                   <p className="text-white/90 mt-8 tracking-widest text-sm">點擊抽取</p>
+                 </>
+               )}
+            </div>
+          </div>
+        </div>
+        <p className={`${styles.textSub} text-sm animate-pulse`}>宇宙準備了一份訊息給您...</p>
+      </div>
+    </div>
+  );
+
+  const RevealScreen = () => (
+    <div className={`min-h-screen ${styles.appBg} flex flex-col items-center justify-center p-4 transition-colors duration-500 ${styles.font}`}>
+      <div className="perspective-1000 w-full max-w-sm h-[600px] cursor-pointer z-10" onClick={() => setIsFlipped(!isFlipped)}>
+        <div className={`relative w-full h-full duration-700 preserve-3d transition-transform ${isFlipped ? 'rotate-y-180' : ''}`}>
+          
+          {/* Back Side (Logo) */}
+          <div className={`absolute w-full h-full backface-hidden rounded-[32px] shadow-xl overflow-hidden flex items-center justify-center ${styles.cardBackBorder}`}>
+             <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${theme.cardImage})` }}></div>
+             <div className={`absolute inset-0 ${styles.cardBackOverlay}`}></div>
+             <div className="relative z-10">
+                {currentThemeId === 'zen' ? <span className="text-[#F5F5F0] text-xl font-serif">心</span> : <Sparkles className="w-16 h-16 text-white/60" />}
+             </div>
+          </div>
+
+          {/* Front Side (Content) */}
+          <div className={`absolute w-full h-full backface-hidden rotate-y-180 ${styles.cardFront} overflow-hidden flex flex-col rounded-[32px] shadow-xl`}>
+             
+             {/* Content */}
+             <div className="relative z-10 flex flex-col h-full justify-between">
+                
+                {/* Top Section */}
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+                  <span className={`px-4 py-1 text-xs font-bold tracking-widest uppercase ${styles.accent} bg-opacity-10 bg-gray-100 rounded-full`}>
+                    {currentCard.category}
+                  </span>
+                  
+                  <h2 className={`text-3xl font-bold ${styles.textColorOnCard} leading-tight tracking-wide`}>{currentCard.title}</h2>
+                  
+                  <div className={`w-8 h-1 rounded-full ${styles.accent.replace('text-', 'bg-')}`}></div>
+                  
+                  <p className={`${styles.textColorOnCard} leading-loose text-lg font-medium opacity-90`}>
+                    {currentCard.message}
+                  </p>
+                </div>
+                
+                {/* Bottom Action Box */}
+                <div className={`p-6 mx-6 mb-8 rounded-2xl ${styles.actionBox}`}>
+                  <div className="flex items-start space-x-3">
+                    <PenTool className={`w-5 h-5 ${styles.accent} flex-shrink-0 mt-1`} />
+                    <div className="text-left">
+                      <p className={`text-xs ${styles.accent} font-bold uppercase mb-1`}>今日微行動</p>
+                      <p className={`${styles.textColorOnCard} text-sm`}>{currentCard.action}</p>
+                    </div>
+                  </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+      <div className={`mt-8 space-y-3 w-full max-w-sm transition-opacity duration-1000 z-10 ${isFlipped ? 'opacity-100' : 'opacity-0'}`}>
+        <button onClick={copyContent} className={`w-full py-4 flex items-center justify-center gap-2 transition-all ${styles.btnSecondary}`}>
+          {copySuccess ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+          <span>{copySuccess ? '已複製！' : '收藏這句話'}</span>
+        </button>
+        <button onClick={drawCard} className={`w-full py-4 flex items-center justify-center gap-2 transition-all ${styles.btnSecondary}`}><RefreshCw className="w-4 h-4" /><span>再抽一張</span></button>
+        <button onClick={() => setScreen('welcome')} className={`w-full py-4 flex items-center justify-center gap-2 transition-all ${styles.btnPrimary}`}><Heart className="w-4 h-4" /><span>收下祝福</span></button>
+      </div>
+    </div>
+  );
+
+  const WorkerHistoryScreen = () => {
+    const [myLogs, setMyLogs] = useState([]);
+    useEffect(() => {
+      if(!user || !db) return;
+      const q = collection(db, 'mood_logs');
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const logs = snapshot.docs.map(d => ({id:d.id, ...d.data(), timestamp: d.data().timestamp?.toDate() || new Date()}))
+          .filter(l => l.userId === user.uid)
+          .sort((a,b) => b.timestamp - a.timestamp);
+        setMyLogs(logs);
+      });
+      return () => unsubscribe();
+    }, [user]);
+    const myChartData = myLogs.slice(0, 15).reverse().map(l => ({date: l.timestamp.toLocaleDateString(undefined, {month:'numeric', day:'numeric'}), score: l.moodScore}));
+
+    return (
+      <div className={`min-h-screen ${styles.appBg} flex flex-col p-6 ${styles.font} transition-colors duration-500`}>
+        <div className="max-w-4xl w-full mx-auto space-y-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className={`text-2xl font-bold ${styles.textMain} flex items-center gap-2`}><History className="w-6 h-6" /> 我的覺察足跡</h2>
+            <button onClick={() => setScreen('welcome')} className={`${styles.textSub} hover:${styles.textMain} underline`}>返回</button>
+          </div>
+          {myLogs.length > 0 && (
+            <div className={`p-6 rounded-2xl shadow-sm h-64 ${currentThemeId === 'watercolor' ? 'bg-white/40 backdrop-blur-md border border-white' : 'bg-white border border-stone-200'}`}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={myChartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
+                  <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                  <Line type="monotone" dataKey="score" stroke={styles.chartColor} strokeWidth={3} dot={{ fill: styles.chartColor }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <div className="space-y-3">
+             {myLogs.map(log => (
+               <div key={log.id} className={`p-5 rounded-xl shadow-sm flex justify-between items-center ${currentThemeId === 'watercolor' ? 'bg-white/60 backdrop-blur-sm' : 'bg-white border border-stone-100'}`}>
+                 <div>
+                   <span className={`font-bold ${styles.textMain}`}>{log.moodLabel}</span>
+                   <span className={`text-xs ${styles.textSub} ml-2`}>{log.timestamp.toLocaleDateString()}</span>
+                   <p className={`text-sm ${styles.textSub} mt-1`}>{log.cardTitle}</p>
+                 </div>
+               </div>
+             ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (initError) return <div className="min-h-screen flex items-center justify-center bg-stone-50 text-stone-500 p-8 text-center">系統初始化失敗，請確認網路連線或稍後再試。<br/>(Firebase Config Error)</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-stone-50 text-stone-400">正在進入心靈空間...</div>;
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap');
+      `}</style>
+      {screen === 'login' && <LoginScreen />}
+      {screen === 'supervisor' && <SupervisorScreen />}
+      {screen === 'welcome' && <WelcomeScreen />}
+      {screen === 'checkin' && <CheckinScreen />}
+      {screen === 'deck' && <DeckScreen />}
+      {screen === 'reveal' && <RevealScreen />}
+      {screen === 'history' && <WorkerHistoryScreen />}
+    </>
+  );
+}
